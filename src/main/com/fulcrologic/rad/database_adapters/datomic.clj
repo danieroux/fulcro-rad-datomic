@@ -37,15 +37,9 @@
 
   Optionally takes in a transform-fn, applies to individual result(s)."
   ([db pattern db-idents eid-or-eids]
-   (->> (if (and (not (eql/ident? eid-or-eids)) (sequential? eid-or-eids))
-          (d/pull-many db pattern eid-or-eids)
-          (d/pull db pattern eid-or-eids))
-     (common/replace-ref-types* db datoms-for-id-peer-api db-idents)))
-  ([db pattern ident-keywords eid-or-eids transform-fn]
-   (let [result (pull-* db pattern ident-keywords eid-or-eids)]
-     (if (sequential? result)
-       (mapv transform-fn result)
-       (transform-fn result)))))
+   (common/pull-*-common db d/pull d/pull-many datoms-for-id-peer-api pattern db-idents eid-or-eids))
+  ([db pattern db-idents eid-or-eids transform-fn]
+   (common/pull-*-common db d/pull d/pull-many datoms-for-id-peer-api pattern db-idents eid-or-eids transform-fn)))
 
 (defn get-by-ids
   [db ids db-idents desired-output]
