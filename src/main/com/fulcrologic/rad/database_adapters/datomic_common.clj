@@ -473,6 +473,30 @@
         "Attribute was missing schema, or could not be found in the attribute registry: " qualified-key)
       nil)))
 
+(defn generate-resolvers*
+  "Generate all of the resolvers that make sense for the given database config. This should be passed
+  to your Pathom parser to register resolvers for each of your schemas."
+  [pull-fn pull-many-fn datoms-for-id-fn
+   attributes schema]
+  (let [attributes            (filter #(= schema (::attr/schema %)) attributes)
+        key->attribute        (attr/attribute-map attributes)
+        entity-id->attributes (group-by ::k (mapcat (fn [attribute]
+                                                      (map
+                                                        (fn [id-key] (assoc attribute ::k id-key))
+                                                        (get attribute ::attr/identities)))
+                                              attributes))
+        entity-resolvers      (reduce-kv
+                                (fn [result k v]
+                                  (enc/if-let [attr     (key->attribute k)
+                                               resolver (id-resolver-pathom2* pull-fn pull-many-fn datoms-for-id-fn attributes attr v)]
+                                    (conj result resolver)
+                                    (do
+                                      (log/error "Internal error generating resolver for ID key" k)
+                                      result)))
+                                []
+                                entity-id->attributes)]
+    entity-resolvers))
+
 (defn wrap-env
   "Build a (fn [env] env') that adds RAD datomic support to an env. If `base-wrapper` is supplied, then it will be called
    as part of the evaluation, allowing you to build up a chain of environment middleware.
