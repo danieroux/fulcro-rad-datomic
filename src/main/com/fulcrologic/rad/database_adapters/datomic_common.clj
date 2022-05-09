@@ -356,6 +356,29 @@
          ent)
     :else ent))
 
+(defn replace-ref-types*
+  "dbc   the database to query
+   refs  a set of keywords that ref datomic entities, which you want to access directly
+          (rather than retrieving the entity id)
+   m     map returned from datomic pull containing the entity IDs you want to deref"
+  [db datoms-for-id-fn refs arg]
+  (walk/postwalk
+    (fn [arg]
+      (cond
+        (and (map? arg) (some #(contains? refs %) (keys arg)))
+        (reduce
+          (fn [acc ref-k]
+            (cond
+              (and (get acc ref-k) (not (vector? (get acc ref-k))))
+              (update acc ref-k (partial ref-entity->ident* db datoms-for-id-fn))
+              (and (get acc ref-k) (vector? (get acc ref-k)))
+              (update acc ref-k #(mapv (partial ref-entity->ident* db datoms-for-id-fn) %))
+              :else acc))
+          arg
+          refs)
+        :else arg))
+    arg))
+
 (defn wrap-env
   "Build a (fn [env] env') that adds RAD datomic support to an env. If `base-wrapper` is supplied, then it will be called
    as part of the evaluation, allowing you to build up a chain of environment middleware.

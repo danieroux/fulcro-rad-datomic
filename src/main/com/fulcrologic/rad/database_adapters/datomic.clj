@@ -29,22 +29,7 @@
           (rather than retrieving the entity id)
    m     map returned from datomic pull containing the entity IDs you want to deref"
   [db refs arg]
-  (walk/postwalk
-    (fn [arg]
-      (cond
-        (and (map? arg) (some #(contains? refs %) (keys arg)))
-        (reduce
-          (fn [acc ref-k]
-            (cond
-              (and (get acc ref-k) (not (vector? (get acc ref-k))))
-              (update acc ref-k (partial ref-entity->ident db))
-              (and (get acc ref-k) (vector? (get acc ref-k)))
-              (update acc ref-k #(mapv (partial ref-entity->ident db) %))
-              :else acc))
-          arg
-          refs)
-        :else arg))
-    arg))
+  (common/replace-ref-types* db datoms-for-id-peer-api refs arg))
 
 (defn pull-*
   "Will either call d/pull or d/pull-many depending on if the input is
