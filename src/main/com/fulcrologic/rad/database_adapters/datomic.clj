@@ -40,7 +40,7 @@
    (->> (if (and (not (eql/ident? eid-or-eids)) (sequential? eid-or-eids))
           (d/pull-many db pattern eid-or-eids)
           (d/pull db pattern eid-or-eids))
-     (replace-ref-types db db-idents)))
+     (common/replace-ref-types* db datoms-for-id-peer-api db-idents)))
   ([db pattern ident-keywords eid-or-eids transform-fn]
    (let [result (pull-* db pattern ident-keywords eid-or-eids)]
      (if (sequential? result)
