@@ -224,33 +224,12 @@
      (do/databases config))))
 
 (defn entity-query
-  [{:keys       [::attr/schema ::id-attribute]
+  [{:keys       [::attr/schema ::id-attribute ::default-query]
     ::attr/keys [attributes]
-    :as         env} input]
-  (let [{native-id?  do/native-id?
-         ::attr/keys [qualified-key]} id-attribute
-        one? (not (sequential? input))]
-    (enc/if-let [db           (some-> (get-in env [do/databases schema]) deref)
-                 query        (get env ::default-query)
-                 ids          (if one?
-                                [(get input qualified-key)]
-                                (into [] (keep #(get % qualified-key) input)))
-                 ids          (if native-id?
-                                ids
-                                (mapv (fn [id] [qualified-key id]) ids))
-                 enumerations (into #{}
-                                (keep #(when (= :enum (::attr/type %))
-                                         (::attr/qualified-key %)))
-                                attributes)]
-      (do
-        (log/trace "Running" query "on entities with " qualified-key ":" ids)
-        (let [result (get-by-ids db ids enumerations query)]
-          (if one?
-            (first result)
-            result)))
-      (do
-        (log/info "Unable to complete query.")
-        nil))))
+    :as         env}
+   input]
+  (let [common-env (assoc env ::common/id-attribute id-attribute ::common/default-query default-query)]
+    (common/entity-query* d/pull pull-many datoms-for-id-client-api common-env input)))
 
 (defn id-resolver
   "Generates a resolver from `id-attribute` to the `output-attributes`."
