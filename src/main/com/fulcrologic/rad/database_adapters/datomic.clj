@@ -18,7 +18,7 @@
     [taoensso.timbre :as log]))
 
 (defn ref-entity->ident [db ent]
-  (common/ref-entity->ident* db ent (fn datoms-for-id-client-api [db id]
+  (common/ref-entity->ident* db ent (fn datoms-for-id-peer-api [db id]
                                       (d/datoms db :eavt id :db/ident))))
 
 (defn replace-ref-types
