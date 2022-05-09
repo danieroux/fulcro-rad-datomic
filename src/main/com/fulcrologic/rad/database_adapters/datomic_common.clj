@@ -399,6 +399,37 @@
   [db pull-fn pull-many-fn datoms-for-id-fn ids db-idents desired-output]
   (pull-*-common db pull-fn pull-many-fn datoms-for-id-fn desired-output db-idents ids))
 
+(defn entity-query*
+  [pull-fn pull-many-fn datoms-for-id-fn
+   {:keys       [::attr/schema ::id-attribute]
+    ::attr/keys [attributes]
+    :as         env}
+   input]
+  (let [{native-id?  do/native-id?
+         ::attr/keys [qualified-key]} id-attribute
+        one? (not (sequential? input))]
+    (enc/if-let [db           (some-> (get-in env [do/databases schema]) deref)
+                 query        (get env ::default-query)
+                 ids          (if one?
+                                [(get input qualified-key)]
+                                (into [] (keep #(get % qualified-key) input)))
+                 ids          (if native-id?
+                                ids
+                                (mapv (fn [id] [qualified-key id]) ids))
+                 enumerations (into #{}
+                                (keep #(when (= :enum (::attr/type %))
+                                         (::attr/qualified-key %)))
+                                attributes)]
+      (do
+        (log/trace "Running" query "on entities with " qualified-key ":" ids)
+        (let [result (get-by-ids* db pull-fn pull-many-fn datoms-for-id-fn ids enumerations query)]
+          (if one?
+            (first result)
+            result)))
+      (do
+        (log/info "Unable to complete query.")
+        nil))))
+
 (defn wrap-env
   "Build a (fn [env] env') that adds RAD datomic support to an env. If `base-wrapper` is supplied, then it will be called
    as part of the evaluation, allowing you to build up a chain of environment middleware.
