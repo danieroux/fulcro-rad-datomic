@@ -53,8 +53,9 @@
        vec))))
 
 (defn pull-*
-  "Will either call d/pull or d/pull-many depending on if the input is
+  "Will either call d/pull or pull-many depending on if the input is
   sequential or not.
+
   Optionally takes in a transform-fn, applies to individual result(s)."
   ([db pattern db-idents eid-or-eids]
    (common/pull-*-common db d/pull pull-many datoms-for-id-client-api pattern db-idents eid-or-eids))

@@ -358,10 +358,9 @@
     :else ent))
 
 (defn replace-ref-types*
-  "dbc   the database to query
-   refs  a set of keywords that ref datomic entities, which you want to access directly
-          (rather than retrieving the entity id)
-   m     map returned from datomic pull containing the entity IDs you want to deref"
+  "Common implementation of replace-ref-types.
+
+  Takes in datoms-for-id-fn, that is different between on-prem and cloud."
   [db datoms-for-id-fn refs arg]
   (walk/postwalk
     (fn [arg]
@@ -381,10 +380,9 @@
     arg))
 
 (defn pull-*-common
-  "Will either call d/pull or d/pull-many depending on if the input is
-  sequential or not.
+  "Common implementation of pull-*.
 
-  Optionally takes in a transform-fn, applies to individual result(s)."
+  Takes in pull-fn, pull-many-fn, and datoms-for-id-fn, that is different between on-prem and cloud."
   ([db pull-fn pull-many-fn datoms-for-id-fn pattern db-idents eid-or-eids]
    (->> (if (and (not (eql/ident? eid-or-eids)) (sequential? eid-or-eids))
           (pull-many-fn db pattern eid-or-eids)
@@ -397,10 +395,16 @@
        (transform-fn result)))))
 
 (defn get-by-ids*
+  "Common implementation of get-by-ids.
+
+  Takes in pull-fn, pull-many-fn, and datoms-for-id-fn, that is different between on-prem and cloud."
   [db pull-fn pull-many-fn datoms-for-id-fn ids db-idents desired-output]
   (pull-*-common db pull-fn pull-many-fn datoms-for-id-fn desired-output db-idents ids))
 
 (defn entity-query*
+  "Common implementation of entity-query.
+
+  Takes in pull-fn, pull-many-fn, and datoms-for-id-fn, that is different between on-prem and cloud."
   [pull-fn pull-many-fn datoms-for-id-fn
    {:keys       [::attr/schema ::id-attribute]
     ::attr/keys [attributes]
@@ -432,7 +436,9 @@
         nil))))
 
 (defn id-resolver-pathom2*
-  "Generates a resolver from `id-attribute` to the `output-attributes`."
+  "Common implementation of id-resolver.
+
+  Takes in pull-fn, pull-many-fn, and datoms-for-id-fn, that is different between on-prem and cloud."
   [pull-fn pull-many-fn datoms-for-id-fn
    all-attributes
    {::attr/keys [qualified-key] :keys [::attr/schema ::wrap-resolve :com.wsscode.pathom.connect/transform] :as id-attribute}
@@ -474,8 +480,9 @@
       nil)))
 
 (defn generate-resolvers*
-  "Generate all of the resolvers that make sense for the given database config. This should be passed
-  to your Pathom parser to register resolvers for each of your schemas."
+  "Common implementation of generate-resolvers.
+
+  Takes in pull-fn, pull-many-fn, and datoms-for-id-fn, that is different between on-prem and cloud."
   [pull-fn pull-many-fn datoms-for-id-fn
    attributes schema]
   (let [attributes            (filter #(= schema (::attr/schema %)) attributes)
