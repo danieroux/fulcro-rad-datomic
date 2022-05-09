@@ -347,7 +347,7 @@
     (when tuple-txn
       (transact conn (vec tuple-txn)))))
 
-(defn ref-entity->ident* [db {:db/keys [ident id] :as ent} datoms-for-id-fn]
+(defn ref-entity->ident* [db datoms-for-id-fn {:db/keys [ident id] :as ent}]
   "Using datoms-for-id-fn, get to the ident for an entity"
   (cond
     ident ident

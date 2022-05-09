@@ -15,10 +15,12 @@
     [taoensso.encore :as enc]
     [taoensso.timbre :as log]))
 
+(defn datoms-for-id-client-api [db id]
+  (d/datoms db {:index      :eavt
+                :components [id :db/ident]}))
+
 (defn ref-entity->ident [db ent]
-  (common/ref-entity->ident* db ent (fn datoms-for-id-client-api [db id]
-                                      (d/datoms db {:index      :eavt
-                                                    :components [id :db/ident]}))))
+  (common/ref-entity->ident* db datoms-for-id-client-api ent))
 
 (defn replace-ref-types
   "dbc   the database to query
