@@ -379,6 +379,22 @@
         :else arg))
     arg))
 
+(defn pull-*-common
+  "Will either call d/pull or d/pull-many depending on if the input is
+  sequential or not.
+
+  Optionally takes in a transform-fn, applies to individual result(s)."
+  ([db pull-fn pull-many-fn datoms-for-id-fn pattern db-idents eid-or-eids]
+   (->> (if (and (not (eql/ident? eid-or-eids)) (sequential? eid-or-eids))
+          (pull-many-fn db pattern eid-or-eids)
+          (pull-fn db pattern eid-or-eids))
+     (replace-ref-types* db datoms-for-id-fn db-idents)))
+  ([db pull-fn pull-many-fn datoms-for-id-fn pattern ident-keywords eid-or-eids transform-fn]
+   (let [result (pull-*-common db pull-fn pull-many-fn datoms-for-id-fn pattern ident-keywords eid-or-eids)]
+     (if (sequential? result)
+       (mapv transform-fn result)
+       (transform-fn result)))))
+
 (defn wrap-env
   "Build a (fn [env] env') that adds RAD datomic support to an env. If `base-wrapper` is supplied, then it will be called
    as part of the evaluation, allowing you to build up a chain of environment middleware.
