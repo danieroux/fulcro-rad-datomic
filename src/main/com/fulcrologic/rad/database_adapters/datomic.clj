@@ -17,10 +17,11 @@
     [taoensso.encore :as enc]
     [taoensso.timbre :as log]))
 
+(defn datoms-for-id-peer-api [db id]
+  (d/datoms db :eavt id :db/ident))
+
 (defn ref-entity->ident [db ent]
-  (common/ref-entity->ident* db
-                             (fn datoms-for-id-peer-api [db id] (d/datoms db :eavt id :db/ident))
-                             ent))
+  (common/ref-entity->ident* db datoms-for-id-peer-api ent))
 
 (defn replace-ref-types
   "dbc   the database to query
