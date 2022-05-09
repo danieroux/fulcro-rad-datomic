@@ -347,6 +347,14 @@
     (when tuple-txn
       (transact conn (vec tuple-txn)))))
 
+(defn ref-entity->ident* [db {:db/keys [ident id] :as ent} datoms-for-id-fn]
+  "Using datoms-for-id-fn, get to the ident for an entity"
+  (cond
+    ident ident
+    id (if-let [ident (:v (first (datoms-for-id-fn db id)))]
+         ident
+         ent)
+    :else ent))
 
 (defn wrap-env
   "Build a (fn [env] env') that adds RAD datomic support to an env. If `base-wrapper` is supplied, then it will be called
