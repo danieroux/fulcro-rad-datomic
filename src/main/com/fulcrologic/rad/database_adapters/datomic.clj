@@ -343,39 +343,12 @@
   [all-attributes
    {::attr/keys [qualified-key] :keys [::attr/schema ::wrap-resolve :com.wsscode.pathom.connect/transform] :as id-attribute}
    output-attributes]
-  (log/info "Building ID resolver for" qualified-key)
-  (enc/if-let [_          id-attribute
-               outputs    (attr/attributes->eql output-attributes)
-               pull-query (common/pathom-query->datomic-query all-attributes outputs)]
-    (let [resolve-sym      (symbol
-                             (str (namespace qualified-key))
-                             (str (name qualified-key) "-resolver"))
-          with-resolve-sym (fn [r]
-                             (fn [env input]
-                               (r (assoc env :com.wsscode.pathom.connect/sym resolve-sym) input)))]
-      (log/debug "Computed output is" outputs)
-      (log/debug "Datomic pull query to derive output is" pull-query)
-      (cond-> {:com.wsscode.pathom.connect/sym     resolve-sym
-               :com.wsscode.pathom.connect/output  outputs
-               :com.wsscode.pathom.connect/batch?  true
-               :com.wsscode.pathom.connect/resolve (cond-> (fn [{::attr/keys [key->attribute] :as env} input]
-                                                             (->> (entity-query
-                                                                    (assoc env
-                                                                      ::attr/schema schema
-                                                                      ::attr/attributes output-attributes
-                                                                      ::id-attribute id-attribute
-                                                                      ::default-query pull-query)
-                                                                    input)
-                                                               (common/datomic-result->pathom-result key->attribute outputs)
-                                                               (auth/redact env)))
-                                                     wrap-resolve (wrap-resolve)
-                                                     :always (with-resolve-sym))
-               :com.wsscode.pathom.connect/input   #{qualified-key}}
-        transform transform))
-    (do
-      (log/error "Unable to generate id-resolver. "
-        "Attribute was missing schema, or could not be found in the attribute registry: " qualified-key)
-      nil)))
+  (let [common-id-attribute (assoc id-attribute ::common/wrap-resolve wrap-resolve)]
+    (common/id-resolver-pathom2*
+      d/pull d/pull-many datoms-for-id-peer-api
+      all-attributes
+      common-id-attribute
+      output-attributes)))
 
 (defn generate-resolvers
   "Generate all of the resolvers that make sense for the given database config. This should be passed

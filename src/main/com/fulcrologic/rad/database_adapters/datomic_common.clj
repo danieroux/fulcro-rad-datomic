@@ -7,6 +7,7 @@
     [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.fulcrologic.rad.attributes :as attr]
+    [com.fulcrologic.rad.authorization :as auth]
     [com.fulcrologic.rad.database-adapters.datomic-options :as do]
     [com.fulcrologic.rad.ids :refer [new-uuid select-keys-in-ns]]
     [com.fulcrologic.rad.type-support.decimal :as math]
@@ -429,6 +430,48 @@
       (do
         (log/info "Unable to complete query.")
         nil))))
+
+(defn id-resolver-pathom2*
+  "Generates a resolver from `id-attribute` to the `output-attributes`."
+  [pull-fn pull-many-fn datoms-for-id-fn
+   all-attributes
+   {::attr/keys [qualified-key] :keys [::attr/schema ::wrap-resolve :com.wsscode.pathom.connect/transform] :as id-attribute}
+   output-attributes]
+  (log/info "Building ID resolver for" qualified-key)
+  (enc/if-let [_          id-attribute
+               outputs    (attr/attributes->eql output-attributes)
+               pull-query (pathom-query->datomic-query all-attributes outputs)]
+    (let [wrap-resolve     (get id-attribute do/wrap-resolve (get id-attribute ::wrap-resolve))
+          resolve-sym      (symbol
+                             (str (namespace qualified-key))
+                             (str (name qualified-key) "-resolver"))
+          with-resolve-sym (fn [r]
+                             (fn [env input]
+                               (r (assoc env :com.wsscode.pathom.connect/sym resolve-sym) input)))]
+      (log/debug "Computed output is" outputs)
+      (log/debug "Datomic pull query to derive output is" pull-query)
+      (cond-> {:com.wsscode.pathom.connect/sym     resolve-sym
+               :com.wsscode.pathom.connect/output  outputs
+               :com.wsscode.pathom.connect/batch?  true
+               :com.wsscode.pathom.connect/resolve (cond-> (fn [{::attr/keys [key->attribute] :as env} input]
+                                                             (->> (entity-query*
+                                                                    pull-fn pull-many-fn datoms-for-id-fn
+                                                                    (assoc env
+                                                                      ::attr/schema schema
+                                                                      ::attr/attributes output-attributes
+                                                                      ::id-attribute id-attribute
+                                                                      ::default-query pull-query)
+                                                                    input)
+                                                               (datomic-result->pathom-result key->attribute outputs)
+                                                               (auth/redact env)))
+                                                     wrap-resolve (wrap-resolve)
+                                                     :always (with-resolve-sym))
+               :com.wsscode.pathom.connect/input   #{qualified-key}}
+        transform transform))
+    (do
+      (log/error "Unable to generate id-resolver. "
+        "Attribute was missing schema, or could not be found in the attribute registry: " qualified-key)
+      nil)))
 
 (defn wrap-env
   "Build a (fn [env] env') that adds RAD datomic support to an env. If `base-wrapper` is supplied, then it will be called
