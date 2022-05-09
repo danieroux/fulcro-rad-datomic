@@ -57,15 +57,9 @@
   sequential or not.
   Optionally takes in a transform-fn, applies to individual result(s)."
   ([db pattern db-idents eid-or-eids]
-   (->> (if (and (not (eql/ident? eid-or-eids)) (sequential? eid-or-eids))
-          (pull-many db pattern eid-or-eids)
-          (d/pull db pattern eid-or-eids))
-     (replace-ref-types db db-idents)))
-  ([db pattern ident-keywords eid-or-eids transform-fn]
-   (let [result (pull-* db pattern ident-keywords eid-or-eids)]
-     (if (sequential? result)
-       (mapv transform-fn result)
-       (transform-fn result)))))
+   (common/pull-*-common db d/pull pull-many datoms-for-id-client-api pattern db-idents eid-or-eids))
+  ([db pattern db-idents eid-or-eids transform-fn]
+   (common/pull-*-common db d/pull pull-many datoms-for-id-client-api pattern db-idents eid-or-eids transform-fn)))
 
 (defn get-by-ids
   [db ids db-idents desired-output]
