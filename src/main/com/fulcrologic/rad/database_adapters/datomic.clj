@@ -43,7 +43,7 @@
 
 (defn get-by-ids
   [db ids db-idents desired-output]
-  (pull-* db desired-output db-idents ids))
+  (common/get-by-ids* db d/pull d/pull-many datoms-for-id-peer-api ids db-idents desired-output))
 
 (defn refresh-current-dbs!
   "Updates the database atoms in the given pathom env. This should be called after any mutation, since a mutation

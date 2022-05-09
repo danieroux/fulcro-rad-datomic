@@ -395,6 +395,10 @@
        (mapv transform-fn result)
        (transform-fn result)))))
 
+(defn get-by-ids*
+  [db pull-fn pull-many-fn datoms-for-id-fn ids db-idents desired-output]
+  (pull-*-common db pull-fn pull-many-fn datoms-for-id-fn desired-output db-idents ids))
+
 (defn wrap-env
   "Build a (fn [env] env') that adds RAD datomic support to an env. If `base-wrapper` is supplied, then it will be called
    as part of the evaluation, allowing you to build up a chain of environment middleware.
