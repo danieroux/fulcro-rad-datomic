@@ -96,7 +96,7 @@
       (log/info "Deleting" ident)
       (let [database-atom (get-in env [do/databases schema])
             tx!           (or transact d/transact)]
-        @(d/transact connection txn)
+        @(tx! connection txn)
         (when database-atom
           (reset! database-atom (d/db connection)))
         {}))
