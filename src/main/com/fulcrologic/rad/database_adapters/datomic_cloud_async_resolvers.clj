@@ -73,14 +73,31 @@
             v))
         arg))))
 
+;; Datomic local seems to have an odd bug in pull where it internally can put nil on the channel which crashes things
+(defn- pull
+  "Datomic async pull in datomic local sometimes crashes by putting nil on the internal channel"
+  [db pattern id]
+  (async/go
+    (let [result (async/<! (if (or (int? id) (keyword? id))
+                             (d/q
+                               {:query '[:find (pull ?e pattern)
+                                         :in $ pattern ?e]
+                                :args  [db pattern id]})
+                             (d/q
+                               {:query '[:find (pull ?e pattern)
+                                         :in $ pattern ?a ?v
+                                         :where
+                                         [?e ?a ?v]]
+                                :args  [db pattern (first id) (second id)]})))]
+      (ffirst result))))
+
 (defn pull-*
   "Pulls one OR many things, and makes sure db/ident maps are replaced just by the db/ident keyword."
   [db pattern db-idents eid-or-eids]
   (async/go
     (let [items (async/<! (if (and (not (eql/ident? eid-or-eids)) (sequential? eid-or-eids))
                             (pull-many db pattern eid-or-eids)
-                            (d/pull db {:selector pattern
-                                        :eid      eid-or-eids})))]
+                            (pull db pattern eid-or-eids)))]
       (async/<! (replace-ref-types* db db-idents items)))))
 
 (defn entity-query*
